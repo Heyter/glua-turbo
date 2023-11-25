@@ -120,6 +120,7 @@ do
 	end
 end
 
+---- 1 000 000
 -- table.remove:
         -- sum = 12.332
         -- avg = 0.12332
@@ -145,6 +146,70 @@ function table.Remove(tbl, index)
     end
 
 	return lastValue
+end
+
+do
+	---- 1 000 000
+	-- BlastDamageSqr:
+			-- sum = 0.13600000000002
+			-- avg = 0.13600000000002
+			-- median = 0.13600000000002
+	-- BlastDamage:
+			-- sum = 0.858
+			-- avg = 0.858
+			-- median = 0.858
+
+	local trace = {}
+	local traceData = {output = trace, filter = {}}
+
+	function util.BlastDamageSqr(inflictor, attacker, damageOrigin, damageRadius, damage)
+		if damage == 0 then return end
+
+		-- local players = player.cache.IteratorHumans()
+		local players = player.GetAll()
+		local ply = NULL
+		local dmg = 0
+
+		local info = DamageInfo()
+		info:SetAttacker(attacker)
+		info:SetInflictor(inflictor)
+		info:SetDamageType(DMG_BLAST)
+		info:SetDamageForce(vector_up)
+		info:SetDamagePosition(damageOrigin)
+
+		traceData.start = damageOrigin
+		traceData.filter[1] = inflictor
+
+		local sqr = damageRadius * damageRadius
+		local dist = 0
+
+		for i = 1, #players do
+			ply = players[i]
+
+			if ply then
+				dist = ply:GetPos():DistToSqr(damageOrigin)
+
+				if dist == 0 or dist <= sqr then
+					dmg = dist == 0 and damage or 0
+
+					if dmg == 0 then
+						traceData.filter[2] = ply
+						traceData.endpos = ply:NearestPoint(damageOrigin)
+						util.TraceLine(traceData)
+
+						if not trace.Hit or trace.Entity == ply then
+							dmg = ((damageRadius - traceData.endpos:Distance(damageOrigin)) / damageRadius) * damage
+						end
+					end
+
+					if dmg > 0 then
+						info:SetDamage(dmg)
+						ply:TakeDamageInfo(info)
+					end
+				end
+			end
+		end
+	end
 end
 
 --- type
@@ -178,29 +243,4 @@ if (SERVER) then
 	NEXTBOT.IsWeapon = returnFalse
 	NEXTBOT.IsNPC = returnFalse
 	NEXTBOT.IsNextbot = returnTrue
-end
-
-local pattern = "%s%s%s"
-local format = string.format
-
-do
-	local cache = {}
-	function SVector(a, b, c)
-		local id = format(pattern, a, b, c)
-		local result = cache[id]
-		if result then return result end
-		cache[id] = Vector(a, b, c)
-		return cache[id]
-	end
-end
-
-do
-	local cache = {}
-	function SAngle(a, b, c)
-		local id = format(pattern, a, b, c)
-		local result = cache[id]
-		if result then return result end
-		cache[id] = Angle(a, b, c)
-		return cache[id]
-	end
 end

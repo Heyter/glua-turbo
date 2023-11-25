@@ -7,7 +7,7 @@
 --]]
 
 local addonName = 'Random Patches'
--- local version = '4.0.0'
+-- local version = '5.0.0'
 local NULL = NULL
 
 local ipairs = ipairs
@@ -40,31 +40,9 @@ function table.Random( tbl, issequential )
 	return tbl[ rand ], rand
 end
 
--- Improved IsMounted
-do
-
-	local engine_GetGames = engine.GetGames
-	local mounted = {}
-
-	local function cacheMounted()
-		table.Empty( mounted )
-
-		for _, tbl in ipairs( engine_GetGames() ) do
-			if tbl.mounted then
-				mounted[ tbl.folder ] = true
-				mounted[ tbl.depot ] = true
-			end
-		end
-	end
-
-	function IsMounted( name ) return mounted[ name ] end
-
-	hook.Add( 'GameContentChanged', addonName .. ' - Improved IsMounted', cacheMounted )
-	cacheMounted()
-
-end
-
 if SERVER then
+	local R = debug.getregistry()
+	local ENTITY = R.Entity
 
 	-- Normal Deploy Speed
 	RunConsoleCommand( 'sv_defaultdeployspeed', '1' )
@@ -84,19 +62,20 @@ if SERVER then
 	do
 		local meta = FindMetaTable( 'Player' )
 		if meta.UserID and debug.getinfo( meta.UserID ).short_src == '[C]' then
-			RandomPatches_UserID = RandomPatches_UserID or meta.UserID
+			CUserID = CUserID or meta.UserID
 
 			function meta:UserID()
-				return self.__UserID or RandomPatches_UserID( self )
+				return self.__UserID or CUserID( self )
 			end
 
-			local function CacheUserID( ply )
-				ply.__UserID = RandomPatches_UserID( ply )
-			end
+			local function CacheUserID( ply ) ply.__UserID = CUserID( ply ) end
 			hook.Add( 'PlayerInitialSpawn', addonName .. ' - CacheUserID', CacheUserID, HOOK_MONITOR_HIGH )
 			hook.Add( 'PlayerAuthed', addonName .. ' - CacheUserID', CacheUserID, HOOK_MONITOR_HIGH )
 		end
 	end
+
+	local CEntityGetInternalVariable = ENTITY.GetInternalVariable
+	local CEntityGetClass = ENTITY.GetClass
 
 	-- Area portals fix
 	do
@@ -115,7 +94,7 @@ if SERVER then
 		local ents_FindByClass = ents.FindByClass
 		hook.Add( 'EntityRemoved', addonName .. ' - Area Portal Fix', function( ent )
 			if (mapIsCleaning) then return end
-			if ent and ent:IsValid() and doorClasses[ ent:GetClass() ] then
+			if ent and ent:IsValid() and doorClasses[ CEntityGetClass(ent) ] then
 				local name = ent:GetName()
 				if (name ~= '') then
 					local portals = ents_FindByClass( 'func_areaportal' )
@@ -124,7 +103,7 @@ if SERVER then
 					for i = 1, #portals do
 						portal = portals[i]
 
-						if portal and portal:GetInternalVariable( 'target' ) == name then
+						if portal and CEntityGetInternalVariable(portal, 'target' ) == name then
 							portal:SetSaveValue( 'target', '' )
 							portal:Fire( 'open' )
 						end
@@ -135,85 +114,56 @@ if SERVER then
 
 	end
 
-	hook.Add( 'OnFireBulletCallback', addonName .. ' - PrisonerTakeDamage', function( attk, tr, cdmg )
-		local ent = tr.Entity
-		if (ent:IsValid()) then
-			hook.Run( 'EntityTakeDamage', ent, cdmg )
-		end
-	end )
-
-	-- Literally garrysmod-requests #1845
-	hook.Add( 'EntityFireBullets', addonName .. ' - BulletCallbackHook', function( ent, data )
-		local old_callback = data.Callback
-		function data.Callback( attk, tr, cdmg )
-			hook.Run( 'OnFireBulletCallback', attk, tr, cdmg )
-			if old_callback then
-				return old_callback( attk, tr, cdmg )
-			end
-		end
-	end, HOOK_MONITOR_HIGH )
-
-	-- Steam Auth Check
-	-- hook.Add( 'PlayerInitialSpawn', addonName .. ' - Steam Auth Check', function( ply )
-		-- -- If lan server, no authentication - no checks (fixes -multirun)
-		-- if GetConVar( 'sv_lan' ):GetBool() then return end
-		-- if ply:IsBot() or ply:IsListenServerHost() or ply:IsFullyAuthenticated() then return end
-		-- ply:Kick( 'Your SteamID wasn\'t fully authenticated, try restart steam.' )
-	-- end, HOOK_MONITOR_HIGH )
-
 	-- Pod network fix by Kefta (code_gs#4197)
 	-- Literally garrysmod-issues #2452
 	do
 
 		local EFL_NO_THINK_FUNCTION = EFL_NO_THINK_FUNCTION
 		local podName = "prop_vehicle_prisoner_pod"
+		local CEntityAddEFlags = ENTITY.AddEFlags
 
 		-- Fixes for prop_vehicle_prisoner_pod, worldspawn (and other not Valid but not NULL entities) damage taking (bullets only)
 		-- Explosive damage only works if is located in front of prop_vehicle_prisoner_pod (wtf?)
 		hook.Add( 'EntityTakeDamage', addonName .. ' - PrisonerFix', function( ent, dmg )
 			if !ent or !ent:IsValid() or ent:IsNPC() then return end
+			if CEntityGetClass(ent) ~= podName or ent.AcceptDamageForce then return end
 
-			if ent.AcceptDamageForce or ent:GetClass() == podName then
-				ent:TakePhysicsDamage( dmg )
-			end
+			ent:TakePhysicsDamage( dmg )
 		end )
 
 		hook.Add( 'OnEntityCreated', addonName .. ' - Pod Fix', function( veh )
-			if (veh:GetClass() == podName) then
-				veh:AddEFlags( EFL_NO_THINK_FUNCTION )
+			if (CEntityGetClass(veh) == podName) then
+				CEntityAddEFlags(veh, EFL_NO_THINK_FUNCTION )
 			end
 		end )
 
 		hook.Add( 'PlayerEnteredVehicle', addonName .. ' - Pod Fix', function( _, veh )
-			if (veh:GetClass() == podName) then
+			if (CEntityGetClass(veh) == podName) then
 				veh:RemoveEFlags( EFL_NO_THINK_FUNCTION )
 			end
 		end )
 
 		hook.Add( 'PlayerLeaveVehicle', addonName .. ' - Pod Fix', function( _, veh )
-			if veh:GetClass() != podName then return end
+			if CEntityGetClass(veh) != podName then return end
 			hook.Add('Think', veh, function( self )
 				hook.Remove( "Think", self )
 
-				if self:GetInternalVariable( "m_bEnterAnimOn" ) then return end
-				if self:GetInternalVariable( "m_bExitAnimOn" ) then return end
-				self:AddEFlags( EFL_NO_THINK_FUNCTION )
+				if CEntityGetInternalVariable(self, "m_bEnterAnimOn" ) then return end
+				if CEntityGetInternalVariable(self, "m_bExitAnimOn" ) then return end
+				CEntityAddEFlags(self, EFL_NO_THINK_FUNCTION )
 			end)
 		end )
 	end
 
 	-- Fix for https://github.com/Facepunch/garrysmod-issues/issues/2447
 	-- https://github.com/SuperiorServers/dash/blob/master/lua/dash/extensions/player.lua#L44-L57
-
 	do
-		-- local ENTITY = FindMetaTable( 'Entity' )
-		-- CSetPos = CSetPos or ENTITY.SetPos
-		local SetPos = debug.getregistry().Entity.SetPos
-
+		local CEntitySetPos = ENTITY.SetPos
 		local positions = {}
-		FindMetaTable('Player').SetPos = function(this, pos)
+
+		FindMetaTable('Player').SetPos = function(ply, pos)
 			if isvector(pos) then
-				positions[this] = pos
+				positions[ply] = pos
 			end
 		end
 
@@ -221,12 +171,15 @@ if SERVER then
 			local pos = positions[ply]
 			if not pos then return end
 
-			SetPos(ply, pos)
+			CEntitySetPos(ply, pos)
 			positions[ply] = nil
 
 			return true
 		end)
 
+		hook.Add("PlayerDisconnected", addonName .. ' - SetPos Fix', function(ply)
+			positions[ply] = nil
+		end)
 	end
 end
 
