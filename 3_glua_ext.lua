@@ -244,3 +244,28 @@ if (SERVER) then
 	NEXTBOT.IsNPC = returnFalse
 	NEXTBOT.IsNextbot = returnTrue
 end
+
+local pattern = "%s%s%s"
+local format = string.format
+
+do
+	local cache = {}
+	function SVector(a, b, c)
+		local id = format(pattern, a, b, c)
+		local result = cache[id]
+		if result then return result end
+		cache[id] = Vector(a, b, c)
+		return cache[id]
+	end
+end
+
+do
+	local cache = {}
+	function SAngle(a, b, c)
+		local id = format(pattern, a, b, c)
+		local result = cache[id]
+		if result then return result end
+		cache[id] = Angle(a, b, c)
+		return cache[id]
+	end
+end
