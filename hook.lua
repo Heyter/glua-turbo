@@ -5,9 +5,8 @@ local IsValid = IsValid
 local pairs = pairs
 
 local hook_callbacks = {}
-local hook_index 	 = {}
-local hook_id		 = {}
-local hook_removed = false
+local hook_index = {}
+local hook_id = {}
 
 local function GetTable() -- This function is now slow
 	local ret = {}
@@ -24,10 +23,12 @@ local function Exists(name, id)
 	return (hook_index[name] ~= nil) and (hook_index[name][id] ~= nil)
 end
 
+-- hook.HasHook("HUDPaint")
 local function HasHook(event_name)
 	return hook_index[event_name] ~= nil
 end
 
+-- hook.GetHook("HUDPaint", "test")
 local function GetHook(name, uniq)
 	local id = (hook_index[name] ~= nil) and hook_index[name][uniq]
 
@@ -36,24 +37,22 @@ end
 
 local function Call(name, gm, ...)
 	local callbacks = hook_callbacks[name]
-	hook_removed = false
 
 	if (callbacks ~= nil) then
-		local i = 0
-		::runhook::
-		i = i + 1
-		local v = callbacks[i]
-		if (v ~= nil) then
-			local a, b, c, d, e, f = v(...)
-			if hook_removed then
-				hook_removed = false
-				i = i - 1
-			end
+		local i = #callbacks
 
-			if (a ~= nil) then
-				return a, b, c, d, e, f
+		if i > 0 then
+			::runhook::
+			i = i - 1
+			local v = callbacks[i]
+			if (v ~= nil) then
+				local a, b, c, d, e, f = v(...)
+
+				if (a ~= nil) then
+					return a, b, c, d, e, f
+				end
+				goto runhook
 			end
-			goto runhook
 		end
 	end
 
@@ -87,9 +86,8 @@ local function Remove(name, id)
 		return
 	end
 
-	hook_removed = true
-
 	local count = #callbacks
+
 	if (count == index) then
 		callbacks[index] = nil
 		indexes[id] = nil
@@ -166,7 +164,6 @@ hook = setmetatable({
 	Call = Call,
 	GetHook = GetHook,
 	Run = Run
-	-- RemoveSafe = RemoveSafe
 }, {
 	__call = function(self, ...)
 		return self.Add(...)
