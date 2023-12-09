@@ -43,7 +43,6 @@ local function Call(name, gm, ...)
 
 		if i > 0 then
 			::runhook::
-			i = i - 1
 			local v = callbacks[i]
 			if (v ~= nil) then
 				local a, b, c, d, e, f = v(...)
@@ -51,6 +50,8 @@ local function Call(name, gm, ...)
 				if (a ~= nil) then
 					return a, b, c, d, e, f
 				end
+
+				i = i - 1
 				goto runhook
 			end
 		end
