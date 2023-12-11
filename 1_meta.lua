@@ -13,9 +13,10 @@ do
 		function isnumber(val) return val and getmetatable(val) == meta end
 	end
 
-	-- do
-		-- debug.setmetatable(coroutine.create(getmetatable), {MetaName = "thread"})
-	-- end
+	do
+		local _type = coroutine.create(getmetatable)
+		debug.setmetatable(_type, {MetaName = "thread", MetaID = TypeID(_type)})
+	end
 
 	do
 		local _type = function() end

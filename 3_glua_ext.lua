@@ -29,12 +29,16 @@ local PLAYER = R.Player
 local PHYS = R.PhysObj
 
 do
+	local THREAD = debug.getmetatable(coroutine.create(getmetatable))
+	local FUNC = debug.getmetatable(function() end)
+
 	do
 		local typeMeta = {
 			[debug.getmetatable("")] = 'string',
 			[debug.getmetatable(0)] = 'number',
 			[debug.getmetatable(false)] = 'boolean',
-			[debug.getmetatable(function() end)] = 'function',
+			[FUNC] = 'function',
+			[THREAD] = "thread",
 			[R.Vector] = 'Vector',
 			[R.Angle] = 'Angle',
 			[R.VMatrix] = 'VMatrix',
@@ -75,7 +79,8 @@ do
 			[debug.getmetatable("")] = TYPE_STRING,
 			[debug.getmetatable(0)] = TYPE_NUMBER,
 			[debug.getmetatable(false)] = TYPE_BOOL,
-			[debug.getmetatable(function() end)] = TYPE_FUNCTION,
+			[FUNC] = TYPE_FUNCTION,
+			[THREAD] = TYPE_THREAD,
 			[R.Vector] = TYPE_VECTOR,
 			[R.Angle] = TYPE_ANGLE,
 			[R.VMatrix] = TYPE_MATRIX,
@@ -243,29 +248,4 @@ if (SERVER) then
 	NEXTBOT.IsWeapon = returnFalse
 	NEXTBOT.IsNPC = returnFalse
 	NEXTBOT.IsNextbot = returnTrue
-end
-
-local pattern = "%s%s%s"
-local format = string.format
-
-do
-	local cache = {}
-	function SVector(a, b, c)
-		local id = format(pattern, a, b, c)
-		local result = cache[id]
-		if result then return result end
-		cache[id] = Vector(a, b, c)
-		return cache[id]
-	end
-end
-
-do
-	local cache = {}
-	function SAngle(a, b, c)
-		local id = format(pattern, a, b, c)
-		local result = cache[id]
-		if result then return result end
-		cache[id] = Angle(a, b, c)
-		return cache[id]
-	end
 end
