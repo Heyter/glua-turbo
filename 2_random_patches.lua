@@ -1,13 +1,4 @@
---[[
-
-	Title: Random Patches
-	Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=2806290767
-	GitHub: https://github.com/Pika-Software/gmod_random_patches
-
---]]
-
 local addonName = 'Random Patches'
--- local version = '5.0.0'
 local NULL = NULL
 
 local ipairs = ipairs
@@ -292,3 +283,41 @@ if (CLIENT) then
 		end
 	end
 end
+
+do
+	local isSingle = game.SinglePlayer()
+	local isDedicated = game.IsDedicated()
+	function game.SinglePlayer() return isSingle end
+	function game.IsDedicated() return isDedicated end
+end
+
+-- SortedPairs:
+	-- sum = 0.168
+	-- avg = 0.00168
+	-- median = 0.0010000000000012
+-- SortedPairs new:
+	-- sum = 0.082000000000001
+	-- avg = 0.00082000000000001
+	-- median = 0.00099999999999945
+do
+	local pairs_aux = pairs({})
+	local index, keys = 0, {}
+	local sort = table.sort
+	local function fn1(a, b) return a > b end
+	local function fn2(a, b) return a < b end
+	function SortedPairs(tbl, desc)
+		keys, index = {}, 0
+
+		for k in pairs_aux, tbl do
+			index = index + 1
+			keys[index] = k
+		end
+
+		sort(keys, desc and fn1 or fn2)
+		return pairs_aux, tbl
+	end
+end
+
+function widgets.PlayerTick() end
+hook.Remove( "PlayerTick", "TickWidgets" )
+hook.Remove( "PostDrawEffects", "RenderWidgets" )

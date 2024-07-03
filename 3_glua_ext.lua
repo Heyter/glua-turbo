@@ -1,6 +1,20 @@
-do
+do -- lua/includes/extensions/net.lua
 	local receivers = net.Receivers
 	local lower = string.lower
+
+	net.WriteVars = {
+		[TYPE_STRING] = net.WriteString, [TYPE_NUMBER] = net.WriteDouble, [TYPE_TABLE] = net.WriteTable,
+		[TYPE_BOOL] = net.WriteBool, [TYPE_ENTITY] = net.WriteEntity, [TYPE_VECTOR] = net.WriteVector,
+		[TYPE_ANGLE] = net.WriteAngle, [TYPE_MATRIX] = net.WriteMatrix, [TYPE_COLOR] = net.WriteColor,
+		[TYPE_NIL] = function() return nil end
+	}
+
+	net.ReadVars = {
+		[TYPE_STRING] = net.ReadString, [TYPE_NUMBER] = net.ReadDouble, [TYPE_TABLE] = net.ReadTable,
+		[TYPE_BOOL] = net.ReadBool, [TYPE_ENTITY] = net.ReadEntity, [TYPE_VECTOR] = net.ReadVector,
+		[TYPE_ANGLE] = net.ReadAngle, [TYPE_MATRIX] = net.ReadMatrix, [TYPE_COLOR] = net.ReadColor,
+		[TYPE_NIL] = net.WriteVars[TYPE_NIL]
+	}
 
 	function net.Receive(name, func) receivers[lower(name)] = func end
 
@@ -19,6 +33,35 @@ do
 			func(len, client)
 		end
 	end
+
+	do
+		local IsColor = IsColor
+		local typeid = 0
+		local TYPE_COLOR = TYPE_COLOR or 255
+		local writeVars = net.WriteVars
+		local WriteUInt = net.WriteUInt
+
+		function net.WriteType(value)
+			typeid = IsColor(value) and TYPE_COLOR or TypeID(value)
+			WriteUInt(typeid, 8)
+			local func = writeVars[typeid]
+			if func then return func(value) end
+			error( "net.WriteType: Couldn't write " .. type( value ) .. " (type " .. typeid .. ")" )
+		end
+	end
+
+	do
+		local readVars = net.ReadVars
+		local ReadUInt = net.ReadUInt
+
+		function net.ReadType(typeid)
+			typeid = typeid or ReadUInt(8)
+			if typeid == TYPE_NIL then return nil end
+			local func = readVars[typeid]
+			if func then return func() end
+			error( "net.ReadType: Couldn't read type " .. typeid )
+		end
+	end
 end
 
 local R = debug.getregistry()
@@ -29,7 +72,7 @@ local PLAYER = R.Player
 local PHYS = R.PhysObj
 
 do
-	local THREAD = debug.getmetatable(coroutine.create(getmetatable))
+	local THREAD = debug.getmetatable(coroutine.create(function() end))
 	local FUNC = debug.getmetatable(function() end)
 
 	do
@@ -153,6 +196,52 @@ function table.Remove(tbl, index)
 	return lastValue
 end
 
+-- do
+	-- local strSub = string.sub
+	-- string.GetPathFromFilename = function(path)
+		-- local i = #path
+		-- ::iter::
+		-- local c = strSub( path, i, i )
+		-- if ( c == "/" or c == "\\" ) then return strSub( path, 1, i ) end
+		-- i = i - 1
+		-- if i > 0 then goto iter end
+		-- return path
+	-- end
+
+-- -- string.Explode:
+        -- -- sum = 2.867
+        -- -- avg = 0.02867
+        -- -- median = 0.027500000000003
+-- -- string.SplitString:
+        -- -- sum = 0.69100000000003
+        -- -- avg = 0.0069100000000003
+        -- -- median = 0.0059999999999718
+	-- local strLen = string.len
+	-- string.SplitString = function(separator, str)
+		-- local results = {}
+		-- local index, lastPos = 1, 1
+		-- local i, iMax = 1, strLen(str)
+		-- local lastArg
+
+		-- ::iter::
+		-- if strSub(str, i, i) == separator then
+			-- lastArg = strSub(str, lastPos, i - 1)
+			-- -- #lastArg > 0 then
+				-- results[index] = lastArg
+				-- index = index + 1
+			-- -- end
+			-- lastPos = i + 1
+		-- end
+		-- i = i + 1
+		-- if i <= iMax then goto iter end
+
+		-- lastArg = strSub(str, lastPos)
+		-- if lastArg ~= "" then results[index] = lastArg end
+
+		-- return results
+	-- end
+-- end
+
 do
 	---- 1 000 000
 	-- BlastDamageSqr:
@@ -170,8 +259,7 @@ do
 	function util.BlastDamageSqr(inflictor, attacker, damageOrigin, damageRadius, damage)
 		if damage == 0 then return end
 
-		-- local players = player.cache.IteratorHumans()
-		local players = player.GetAll()
+		local _, players = player.Iterator()
 		local ply = NULL
 		local dmg = 0
 
@@ -248,4 +336,79 @@ if (SERVER) then
 	NEXTBOT.IsWeapon = returnFalse
 	NEXTBOT.IsNPC = returnFalse
 	NEXTBOT.IsNextbot = returnTrue
+end
+
+do
+	local inext = ipairs({})
+	local EntityCache = nil
+	local PlayerCache = nil
+
+	function player.Iterator()
+		if PlayerCache == nil then PlayerCache = player.GetAll() end
+		return inext, PlayerCache, 0
+	end
+
+	function ents.Iterator()
+		if EntityCache == nil then EntityCache = ents.GetAll() end
+		return inext, EntityCache, 0
+	end
+
+	local function InvalidateEntityCache(ent)
+		if ent:IsPlayer() then PlayerCache = nil end
+		EntityCache = nil
+	end
+
+	hook.Remove( "OnEntityCreated", "player.Iterator" )
+	hook.Remove( "EntityRemoved", "player.Iterator" )
+
+	hook.Add( "OnEntityCreated", "ents.Iterator", InvalidateEntityCache )
+	hook.Add( "EntityRemoved", "ents.Iterator", InvalidateEntityCache )
+
+	-- example ::
+	-- for k, v in player.Iterator() do print(k, v) end
+end
+
+do
+	local FrameNumber = FrameNumber
+	local util_TraceLine = util.TraceLine
+
+	do
+		local LastPlayerTrace
+		local output = {}
+		local trace = { output = output }
+
+		function PLAYER:GetEyeTrace()
+			if (CLIENT) then
+				local framenum = FrameNumber()
+				if (LastPlayerTrace == framenum) then return output end
+				LastPlayerTrace = framenum
+			end
+
+			trace.start = self:EyePos()
+			trace.endpos = trace.start + ( self:GetAimVector() * 32768 )
+			trace.filter = self
+			util_TraceLine(trace)
+			return output
+		end
+	end
+
+	do
+		local output2 = {}
+		local trace2 = { output = output2 }
+		local LastPlayerAimTrace
+
+		function PLAYER:GetEyeTraceNoCursor()
+			if (CLIENT) then
+				local framenum = FrameNumber()
+				if (LastPlayerAimTrace == framenum) then return output2 end
+				LastPlayerAimTrace = framenum
+			end
+
+			trace2.start = self:EyePos()
+			trace2.endpos = trace2.start + ( self:EyeAngles():Forward() * 32768 )
+			trace2.filter = self
+			util_TraceLine(trace2)
+			return output2
+		end
+	end
 end

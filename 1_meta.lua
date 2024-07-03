@@ -14,7 +14,7 @@ do
 	end
 
 	do
-		local _type = coroutine.create(getmetatable)
+		local _type = coroutine.create(function() end)
 		debug.setmetatable(_type, {MetaName = "thread", MetaID = TypeID(_type)})
 	end
 
