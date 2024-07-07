@@ -1,69 +1,3 @@
-do -- lua/includes/extensions/net.lua
-	local receivers = net.Receivers
-	local lower = string.lower
-
-	net.WriteVars = {
-		[TYPE_STRING] = net.WriteString, [TYPE_NUMBER] = net.WriteDouble, [TYPE_TABLE] = net.WriteTable,
-		[TYPE_BOOL] = net.WriteBool, [TYPE_ENTITY] = net.WriteEntity, [TYPE_VECTOR] = net.WriteVector,
-		[TYPE_ANGLE] = net.WriteAngle, [TYPE_MATRIX] = net.WriteMatrix, [TYPE_COLOR] = net.WriteColor,
-		[TYPE_NIL] = function() return nil end
-	}
-
-	net.ReadVars = {
-		[TYPE_STRING] = net.ReadString, [TYPE_NUMBER] = net.ReadDouble, [TYPE_TABLE] = net.ReadTable,
-		[TYPE_BOOL] = net.ReadBool, [TYPE_ENTITY] = net.ReadEntity, [TYPE_VECTOR] = net.ReadVector,
-		[TYPE_ANGLE] = net.ReadAngle, [TYPE_MATRIX] = net.ReadMatrix, [TYPE_COLOR] = net.ReadColor,
-		[TYPE_NIL] = net.WriteVars[TYPE_NIL]
-	}
-
-	function net.Receive(name, func) receivers[lower(name)] = func end
-
-	if !NetMonitor then
-		local readHead = net.ReadHeader
-		local networkID = util.NetworkIDToString
-
-		function net.Incoming(len, client)
-			local strName = networkID(readHead())
-			if (!strName) then return end
-
-			local func = receivers[lower(strName)]
-			if (!func) then return end
-
-			len = len - 16
-			func(len, client)
-		end
-	end
-
-	do
-		local IsColor = IsColor
-		local typeid = 0
-		local TYPE_COLOR = TYPE_COLOR or 255
-		local writeVars = net.WriteVars
-		local WriteUInt = net.WriteUInt
-
-		function net.WriteType(value)
-			typeid = IsColor(value) and TYPE_COLOR or TypeID(value)
-			WriteUInt(typeid, 8)
-			local func = writeVars[typeid]
-			if func then return func(value) end
-			error( "net.WriteType: Couldn't write " .. type( value ) .. " (type " .. typeid .. ")" )
-		end
-	end
-
-	do
-		local readVars = net.ReadVars
-		local ReadUInt = net.ReadUInt
-
-		function net.ReadType(typeid)
-			typeid = typeid or ReadUInt(8)
-			if typeid == TYPE_NIL then return nil end
-			local func = readVars[typeid]
-			if func then return func() end
-			error( "net.ReadType: Couldn't read type " .. typeid )
-		end
-	end
-end
-
 local R = debug.getregistry()
 local ENTITY = R.Entity
 local WEAPON = R.Weapon
@@ -196,7 +130,7 @@ function table.Remove(tbl, index)
 	return lastValue
 end
 
--- do
+do
 	-- local strSub = string.sub
 	-- string.GetPathFromFilename = function(path)
 		-- local i = #path
@@ -208,39 +142,39 @@ end
 		-- return path
 	-- end
 
--- -- string.Explode:
-        -- -- sum = 2.867
-        -- -- avg = 0.02867
-        -- -- median = 0.027500000000003
--- -- string.SplitString:
-        -- -- sum = 0.69100000000003
-        -- -- avg = 0.0069100000000003
-        -- -- median = 0.0059999999999718
-	-- local strLen = string.len
-	-- string.SplitString = function(separator, str)
-		-- local results = {}
-		-- local index, lastPos = 1, 1
-		-- local i, iMax = 1, strLen(str)
-		-- local lastArg
+-- string.Explode:
+        -- sum = 2.867
+        -- avg = 0.02867
+        -- median = 0.027500000000003
+-- string.SplitString:
+        -- sum = 0.69100000000003
+        -- avg = 0.0069100000000003
+        -- median = 0.0059999999999718
+	local strLen = string.len
+	string.SplitString = function(separator, str)
+		local results = {}
+		local index, lastPos = 1, 1
+		local i, iMax = 1, strLen(str)
+		local lastArg
 
-		-- ::iter::
-		-- if strSub(str, i, i) == separator then
-			-- lastArg = strSub(str, lastPos, i - 1)
-			-- -- #lastArg > 0 then
-				-- results[index] = lastArg
-				-- index = index + 1
-			-- -- end
-			-- lastPos = i + 1
-		-- end
-		-- i = i + 1
-		-- if i <= iMax then goto iter end
+		::iter::
+		if strSub(str, i, i) == separator then
+			lastArg = strSub(str, lastPos, i - 1)
+			-- #lastArg > 0 then
+				results[index] = lastArg
+				index = index + 1
+			-- end
+			lastPos = i + 1
+		end
+		i = i + 1
+		if i <= iMax then goto iter end
 
-		-- lastArg = strSub(str, lastPos)
-		-- if lastArg ~= "" then results[index] = lastArg end
+		lastArg = strSub(str, lastPos)
+		if lastArg ~= "" then results[index] = lastArg end
 
-		-- return results
-	-- end
--- end
+		return results
+	end
+end
 
 do
 	---- 1 000 000
