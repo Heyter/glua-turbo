@@ -131,7 +131,7 @@ function table.Remove(tbl, index)
 end
 
 do
-	-- local strSub = string.sub
+	local strSub = string.sub
 	-- string.GetPathFromFilename = function(path)
 		-- local i = #path
 		-- ::iter::
@@ -304,12 +304,18 @@ end
 
 do
 	local FrameNumber = FrameNumber
-	local util_TraceLine = util.TraceLine
+	local TraceLine = util.TraceLine
+
+	local VECTOR = R.Vector
+	local V_Add, V_Mul, V_Set = VECTOR.Add, VECTOR.Mul, VECTOR.Set
 
 	do
 		local LastPlayerTrace
 		local output = {}
-		local trace = { output = output }
+		-- Thanks @GoodOldBrick
+		local START_VECTOR, END_VECTOR, DIR_VECTOR = Vector(), Vector(), Vector()
+		local trace = { output = output, start = START_VECTOR, endpos = END_VECTOR, filter = NULL }
+		local GetAimVector = PLAYER.GetAimVector
 
 		function PLAYER:GetEyeTrace()
 			if (CLIENT) then
@@ -318,31 +324,41 @@ do
 				LastPlayerTrace = framenum
 			end
 
-			trace.start = self:EyePos()
-			trace.endpos = trace.start + ( self:GetAimVector() * 32768 )
+			V_Set(START_VECTOR, self:EyePos())
+			V_Set(END_VECTOR, START_VECTOR)
+			V_Set(DIR_VECTOR, GetAimVector(self))
+			V_Mul(DIR_VECTOR, 32768)
+			V_Add(END_VECTOR, DIR_VECTOR)
+
 			trace.filter = self
-			util_TraceLine(trace)
+			TraceLine(trace)
 			return output
 		end
 	end
 
 	do
-		local output2 = {}
-		local trace2 = { output = output2 }
 		local LastPlayerAimTrace
+		local output = {}
+		local START_VECTOR, END_VECTOR, DIR_VECTOR = Vector(), Vector(), Vector()
+		local trace = { output = output, start = START_VECTOR, endpos = END_VECTOR, filter = NULL }
+		local EyeAngles, Forward = ENTITY.EyeAngles, R.Angle.Forward
 
 		function PLAYER:GetEyeTraceNoCursor()
 			if (CLIENT) then
 				local framenum = FrameNumber()
-				if (LastPlayerAimTrace == framenum) then return output2 end
+				if (LastPlayerAimTrace == framenum) then return output end
 				LastPlayerAimTrace = framenum
 			end
 
-			trace2.start = self:EyePos()
-			trace2.endpos = trace2.start + ( self:EyeAngles():Forward() * 32768 )
-			trace2.filter = self
-			util_TraceLine(trace2)
-			return output2
+			V_Set(START_VECTOR, self:EyePos())
+			V_Set(END_VECTOR, START_VECTOR)
+			V_Set(DIR_VECTOR, Forward(EyeAngles(self)))
+			V_Mul(DIR_VECTOR, 32768)
+			V_Add(END_VECTOR, DIR_VECTOR)
+
+			trace.filter = self
+			TraceLine(trace)
+			return output
 		end
 	end
 end
