@@ -8,28 +8,42 @@ do
 
 	do
 		local _type = 0
-		debug.setmetatable(_type, {MetaName = "number", MetaID = TypeID(_type)})
 		local meta = debug.getmetatable(_type)
+		if not meta then
+			meta = { MetaName = "number", MetaID = TypeID(_type) }
+			debug.setmetatable(_type, meta)
+		end
 		function isnumber(val) return val and getmetatable(val) == meta end
 	end
 
 	do
-		local _type = coroutine.create(function() end)
-		debug.setmetatable(_type, {MetaName = "thread", MetaID = TypeID(_type)})
-	end
-
-	do
 		local _type = function() end
-		debug.setmetatable(_type, {MetaName = "function", MetaID = TypeID(_type)})
 		local meta = debug.getmetatable(_type)
+		if not meta then
+			meta = { MetaName = "function", MetaID = TypeID(_type) }
+			debug.setmetatable(_type, meta)
+		end
 		function isfunction(val) return val and getmetatable(val) == meta end
 	end
 
 	do
 		local _type = true
-		debug.setmetatable(_type, {MetaName = "boolean", MetaID = TypeID(_type)})
 		local meta = debug.getmetatable(_type)
-		function isboolean(val) return val and getmetatable(val) == meta end
+		if not meta then
+			meta = { MetaName = "boolean", MetaID = TypeID(_type) }
+			debug.setmetatable(_type, meta)
+		end
+		function isbool(val) return val and getmetatable(val) == meta end
+	end
+
+	do
+		local _type = coroutine.create(function() end)
+		local meta = debug.getmetatable(_type)
+		if not meta then
+			meta = { MetaName = "thread", MetaID = TypeID(_type) }
+			debug.setmetatable(_type, meta)
+		end
+		function iscoroutine(val) return val and getmetatable(val) == meta end
 	end
 
 	for k, v in pairs({

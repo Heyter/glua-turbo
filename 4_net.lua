@@ -42,46 +42,38 @@ do
 end
 
 -- Credits: https://t.me/GoodOldBrick
-local proxy = net.__proxy
-
-if not proxy then
-	net.__proxy = {}
-	proxy = net.__proxy
+if not net.__proxy then
+	net.__proxy = true
 
     local receivers_proxy = {}
     local receivers = {}
     local EMPTY = function() end
-    for index = 1, 4096 do
-        receivers[index] = EMPTY
-    end
+    for index = 1, 4096 do receivers[index] = EMPTY end
     local util_NetworkStringToID = util.NetworkStringToID
     local isstring = isstring
     local isfunction = isfunction
 
     do
-        local cache = setmetatable({}, {__mode = "k"})
-        local function __newindex(self, key, value)
-            if not isstring(key) or (not isfunction(value) and value ~= nil) then return end
-            local index = cache[key]
-            if not index then
-                index = util_NetworkStringToID(key)
-                cache[key] = index
-            end
-            if index == 0 then return end
-            receivers[index] = value or EMPTY
-        end
+		local function __newindex(self, key, value)
+			if not isstring(key) then return end
+			local index = util_NetworkStringToID(key)
+			if index == 0 then return end
 
-        local function __index(self, key)
-            if not isstring(key) then return nil end
-            local index = cache[key]
-            if not index then
-                index = util_NetworkStringToID(key)
-                cache[key] = index
-            end
-            local receiver = receivers[index]
-            if receiver == EMPTY then return nil end
-            return receiver
-        end
+			if isfunction(value) then
+				receivers[index] = value
+			else
+				receivers[index] = EMPTY
+			end
+		end
+
+		local function __index(self, key)
+			if not isstring(key) then return nil end
+			local index = util_NetworkStringToID(key)
+			if index == 0 then return nil end
+			local receiver = receivers[index]
+			if receiver == EMPTY then return nil end
+			return receiver
+		end
 
         setmetatable(receivers_proxy, {__newindex = __newindex, __index = __index})
     end
@@ -92,26 +84,12 @@ if not proxy then
         receivers[index] = receiver
     end
 
-    proxy.receivers = receivers
-    proxy.receivers_proxy = receivers_proxy
-end
-
-local receivers = proxy.receivers
-local receivers_proxy = proxy.receivers_proxy
-
-do
     local net_ReadHeader = net.ReadHeader
-    function proxy.incomming(length, client)
+	net.Incoming = function(length, client)
         local index = net_ReadHeader()
         if index < 1 or index > 4096 then return end
         receivers[index](length - 16, client)
-    end
+	end
+	net.Receive = function(name, callback) receivers_proxy[name] = callback end
+	net.Receivers = receivers_proxy
 end
-
-function proxy.receive(name, callback)
-    receivers_proxy[name] = callback
-end
-
-net.Incoming = proxy.incomming
-net.Receive = proxy.receive
-net.Receivers = receivers_proxy

@@ -274,18 +274,29 @@ end
 
 do
 	local inext = ipairs({})
-	local EntityCache = nil
-	local PlayerCache = nil
+	local EntityCache, EntityLen = nil, 0
+	local PlayerCache, PlayerLen = nil, 0
 
 	function player.Iterator()
-		if PlayerCache == nil then PlayerCache = player.GetAll() end
+		if PlayerCache == nil then
+			PlayerCache = player.GetAll()
+			PlayerLen = #PlayerCache
+		end
+
 		return inext, PlayerCache, 0
 	end
 
 	function ents.Iterator()
-		if EntityCache == nil then EntityCache = ents.GetAll() end
+		if EntityCache == nil then
+			EntityCache = ents.GetAll()
+			EntityLen = #EntityCache
+		end
+
 		return inext, EntityCache, 0
 	end
+
+	function player.All() return PlayerLen, PlayerCache end
+	function ents.All() return EntityLen, EntityCache end
 
 	local function InvalidateEntityCache(ent)
 		if ent:IsPlayer() then PlayerCache = nil end
@@ -315,19 +326,19 @@ do
 		-- Thanks @GoodOldBrick
 		local START_VECTOR, END_VECTOR, DIR_VECTOR = Vector(), Vector(), Vector()
 		local trace = { output = output, start = START_VECTOR, endpos = END_VECTOR, filter = NULL }
-		local GetAimVector = PLAYER.GetAimVector
+		local GetAimVector, EyePos = PLAYER.GetAimVector, ENTITY.EyePos
 
-		function PLAYER:GetEyeTrace()
+		function PLAYER:GetEyeTrace(distance)
 			if (CLIENT) then
 				local framenum = FrameNumber()
 				if (LastPlayerTrace == framenum) then return output end
 				LastPlayerTrace = framenum
 			end
 
-			V_Set(START_VECTOR, self:EyePos())
+			V_Set(START_VECTOR, EyePos(self))
 			V_Set(END_VECTOR, START_VECTOR)
 			V_Set(DIR_VECTOR, GetAimVector(self))
-			V_Mul(DIR_VECTOR, 32768)
+			V_Mul(DIR_VECTOR, distance or 32768)
 			V_Add(END_VECTOR, DIR_VECTOR)
 
 			trace.filter = self
@@ -341,19 +352,19 @@ do
 		local output = {}
 		local START_VECTOR, END_VECTOR, DIR_VECTOR = Vector(), Vector(), Vector()
 		local trace = { output = output, start = START_VECTOR, endpos = END_VECTOR, filter = NULL }
-		local EyeAngles, Forward = ENTITY.EyeAngles, R.Angle.Forward
+		local EyeAngles, Forward, EyePos = ENTITY.EyeAngles, R.Angle.Forward, ENTITY.EyePos
 
-		function PLAYER:GetEyeTraceNoCursor()
+		function PLAYER:GetEyeTraceNoCursor(distance)
 			if (CLIENT) then
 				local framenum = FrameNumber()
 				if (LastPlayerAimTrace == framenum) then return output end
 				LastPlayerAimTrace = framenum
 			end
 
-			V_Set(START_VECTOR, self:EyePos())
+			V_Set(START_VECTOR, EyePos(self))
 			V_Set(END_VECTOR, START_VECTOR)
 			V_Set(DIR_VECTOR, Forward(EyeAngles(self)))
-			V_Mul(DIR_VECTOR, 32768)
+			V_Mul(DIR_VECTOR, distance or 32768)
 			V_Add(END_VECTOR, DIR_VECTOR)
 
 			trace.filter = self
