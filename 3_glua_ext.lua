@@ -1,3 +1,5 @@
+if glua_ext_loaded then return end
+
 local R = debug.getregistry()
 local ENTITY = R.Entity
 local WEAPON = R.Weapon
@@ -274,29 +276,17 @@ end
 
 do
 	local inext = ipairs({})
-	local EntityCache, EntityLen = nil, 0
-	local PlayerCache, PlayerLen = nil, 0
+	local EntityCache, PlayerCache = nil, nil
 
 	function player.Iterator()
-		if PlayerCache == nil then
-			PlayerCache = player.GetAll()
-			PlayerLen = #PlayerCache
-		end
-
+		if PlayerCache == nil then PlayerCache = player.GetAll() end
 		return inext, PlayerCache, 0
 	end
 
 	function ents.Iterator()
-		if EntityCache == nil then
-			EntityCache = ents.GetAll()
-			EntityLen = #EntityCache
-		end
-
+		if EntityCache == nil then EntityCache = ents.GetAll() end
 		return inext, EntityCache, 0
 	end
-
-	function player.All() return PlayerLen, PlayerCache end
-	function ents.All() return EntityLen, EntityCache end
 
 	local function InvalidateEntityCache(ent)
 		if ent:IsPlayer() then PlayerCache = nil end
@@ -373,3 +363,5 @@ do
 		end
 	end
 end
+
+glua_ext_loaded = true

@@ -52,17 +52,22 @@ if SERVER then
 	-- https://i.imgur.com/a0lmB9m.png
 	do
 		local meta = FindMetaTable( 'Player' )
-		if meta.UserID and debug.getinfo( meta.UserID ).short_src == '[C]' then
-			CUserID = CUserID or meta.UserID
+		CUserID = CUserID or meta.UserID
+		CSteamID64 = CSteamID64 or meta.SteamID64
+		CSteamID = CSteamID or meta.SteamID
+		local UserID, SteamID64, SteamID = CUserID, CSteamID64, CSteamID
 
-			function meta:UserID()
-				return self.__UserID or CUserID( self )
-			end
+		function meta:UserID() return self.__UserID or UserID( self ) end
+		function meta:SteamID64() return self.__SteamID64 or SteamID64( self ) end
+		function meta:SteamID() return self.__SteamID or SteamID( self ) end
 
-			local function CacheUserID( ply ) ply.__UserID = CUserID( ply ) end
-			hook.Add( 'PlayerInitialSpawn', addonName .. ' - CacheUserID', CacheUserID, HOOK_MONITOR_HIGH )
-			hook.Add( 'PlayerAuthed', addonName .. ' - CacheUserID', CacheUserID, HOOK_MONITOR_HIGH )
+		local function Cache( ply )
+			ply.__UserID = UserID( ply )
+			ply.__SteamID64 = SteamID64( ply )
+			ply.__SteamID = SteamID( ply )
 		end
+		hook.Add( 'PlayerInitialSpawn', addonName .. ' - CacheUserID', Cache, HOOK_MONITOR_HIGH )
+		hook.Add( 'PlayerAuthed', addonName .. ' - CacheUserID', Cache, HOOK_MONITOR_HIGH )
 	end
 
 	local CEntityGetInternalVariable = ENTITY.GetInternalVariable
