@@ -276,21 +276,48 @@ end
 
 do
 	local inext = ipairs({})
-	local EntityCache, PlayerCache = nil, nil
+	local EntityCache, EntityLen = nil, 0
+	local PlayerCache, PlayerLen = nil, 0
 
 	function player.Iterator()
-		if PlayerCache == nil then PlayerCache = player.GetAll() end
+		if PlayerCache == nil then
+			PlayerCache = player.GetAll()
+			PlayerLen = #PlayerCache
+		end
+
 		return inext, PlayerCache, 0
 	end
 
 	function ents.Iterator()
-		if EntityCache == nil then EntityCache = ents.GetAll() end
+		if EntityCache == nil then
+			EntityCache = ents.GetAll()
+			EntityLen = #EntityCache
+		end
+
 		return inext, EntityCache, 0
 	end
 
+	function player.All()
+		if PlayerCache == nil then
+			PlayerCache = player.GetAll()
+			PlayerLen = #PlayerCache
+		end
+
+		return PlayerLen, PlayerCache
+	end
+
+	function ents.All()
+		if EntityCache == nil then
+			EntityCache = ents.GetAll()
+			EntityLen = #EntityCache
+		end
+
+		return EntityLen, EntityCache
+	end
+
 	local function InvalidateEntityCache(ent)
-		if ent:IsPlayer() then PlayerCache = nil end
-		EntityCache = nil
+		if ent:IsPlayer() then PlayerCache, PlayerLen = nil, 0 end
+		EntityCache, EntityLen = nil, 0
 	end
 
 	hook.Remove( "OnEntityCreated", "player.Iterator" )
@@ -301,6 +328,9 @@ do
 
 	-- example ::
 	-- for k, v in player.Iterator() do print(k, v) end
+
+	-- local playerLen, players = player.All()
+	-- for i = 1, playerLen do print(i, players[i]) end
 end
 
 do

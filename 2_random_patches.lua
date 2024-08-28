@@ -1,28 +1,55 @@
 local addonName = 'Random Patches'
 local NULL = NULL
 
-local ipairs = ipairs
-local table = table
-local math = math
-local hook = hook
 local math_random = math.random
-local istable = istable
-local rawset = rawset
+local next, pairs, rawset, istable, ipairs = next, pairs, rawset, istable, ipairs
 
-function math.Clamp( num, min, max )
-	if num < min then return min end
-	if num > max then return max end
-	return num
+do
+	local mmin, mmax = math.min, math.max
+	function math.Clamp( _in, low, high )
+		return mmin( mmax( _in, low ), high )
+	end
 end
 
-function table.Shuffle( tbl )
-	local len = #tbl
-	for i = len, 1, -1 do
-		local rand = math_random( len )
-		tbl[ i ], tbl[ rand ] = tbl[ rand ], tbl[ i ]
+do
+	local length, index = 0, 1
+
+	function table.Shuffle(tbl)
+		length = #tbl
+		for i = length, 1, -1 do
+			index = math_random(1, length)
+			tbl[i], tbl[index] = tbl[index], tbl[i]
+		end
+		return tbl
 	end
 
-	return tbl
+	local keys = setmetatable({}, { __mode = "v" })
+
+	function table.Random( tbl, issequential )
+		if issequential then
+			length = #tbl
+			if length == 0 then return end
+
+			index = 1
+			if length > 1 then index = math_random(1, length) end
+		else
+			if next(tbl) == nil then return end
+			length, index = 0, 1
+
+			for key in pairs(tbl) do
+				length = length + 1
+				keys[length] = key
+			end
+
+			if length == 1 then
+				index = keys[1]
+			else
+				index = keys[math_random(1, length)]
+			end
+		end
+
+		return tbl[index], index
+	end
 end
 
 function table.Random( tbl, issequential )
