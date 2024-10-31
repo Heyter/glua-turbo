@@ -416,4 +416,39 @@ end
 
 MAX_PLAYER_BITS = math.ceil( math.log( 1 + game.MaxPlayers() ) / math.log( 2 ) )
 
+do
+	local cachergb = {}
+	local cachehex = {}
+
+	for i = 0, 255 do
+		local c = string.format("%02x", i)
+		cachergb[c] = i
+		cachehex[i] = c
+	end
+
+	util.RGBToHex = function(color)
+		return ( cachehex[color.r] or "ff" ) .. (cachehex[color.g] or "ff" ) .. ( cachehex[color.b] or "ff" ) .. "ff"
+	end
+
+	util.RGBAToHex = function(color)
+		return ( cachehex[color.r] or "ff" ) .. (cachehex[color.g] or "ff" ) .. ( cachehex[color.b] or "ff" ) .. ( cachehex[color.a] or "ff" )
+	end
+
+	local sub = string.sub
+	util.HexToRGB = function(hex)
+		return cachergb[sub(hex,1,2)], cachergb[sub(hex,3,4)], cachergb[sub(hex,5,6)]
+	end
+
+	util.HexToRGBA = function(hex)
+		return cachergb[sub(hex,1,2)], cachergb[sub(hex,3,4)], cachergb[sub(hex,5,6)], cachergb[sub(hex,7,8)]
+	end
+
+	-- :: Example ::
+	-- TOOL.ClientConVar[ "hex" ] = "ffffffff"
+	-- ply:ConCommand( "remover_hex " .. util.RGBAToHex( color_white ) )
+	-- local hex = LocalPlayer():GetInfo("remover_hex")
+	-- if not hex then hex = "ffffffff" end
+	-- local r,g,b,a = util.HexToRGBA(hex)
+end
+
 glua_ext_loaded = true
