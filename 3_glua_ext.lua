@@ -279,6 +279,26 @@ do
 	local EntityCache, EntityLen = nil, 0
 	local PlayerCache, PlayerLen = nil, 0
 
+	-- alias player.GetCount but faster
+	function player.Count()
+		if PlayerCache == nil then
+			PlayerCache = player.GetAll()
+			PlayerLen = #PlayerCache
+		end
+
+		return PlayerLen
+	end
+
+	-- alias ents.GetCount but faster
+	function ents.Count()
+		if EntityCache == nil then
+			EntityCache = ents.GetAll()
+			EntityLen = #EntityCache
+		end
+
+		return EntityLen
+	end
+
 	function player.Iterator()
 		if PlayerCache == nil then
 			PlayerCache = player.GetAll()
@@ -393,5 +413,7 @@ do
 		end
 	end
 end
+
+MAX_PLAYER_BITS = math.ceil( math.log( 1 + game.MaxPlayers() ) / math.log( 2 ) )
 
 glua_ext_loaded = true
