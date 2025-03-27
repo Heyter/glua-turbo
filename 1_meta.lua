@@ -66,18 +66,14 @@ do
 		local EntityFunction = Entity
 		Entity = FindMetaTable("Entity")
 
-		setmetatable(Entity, {
-			__call = function(_, x) return EntityFunction(x) end
-		})
+		setmetatable(Entity, { __call = function(_, x) return EntityFunction(x) end })
 	end
 
 	if isfunction(Player) then
 		local PlayerFunction = Player
 		Player = FindMetaTable("Player")
 
-		setmetatable(Player, {
-			__call = function(_, x) return PlayerFunction(x) end
-		})
+		setmetatable(Player, { __call = function(_, x) return PlayerFunction(x) end })
 	end
 
 	local ENT = Entity
@@ -85,8 +81,7 @@ do
 	do
 		-- caches the Entity.GetTable so stuff is super fast
 		CEntityGetTable = CEntityGetTable or ENT.GetTable
-		local cgettable = CEntityGetTable
-		local rawset = rawset
+		local cgettable, rawset = CEntityGetTable, rawset
 
 		-- __mode = "kv",
 		EntityTable = setmetatable({}, {
@@ -101,25 +96,18 @@ do
 		})
 	end
 
-	local GetTable = EntityTable
-	local simple = timer.Simple
+	local GetTable, simple = EntityTable, timer.Simple
 
 	-- Apparently entities cant be weak keys
 	hook.Add("EntityRemoved", "CleanupEntityTableCache", function(ent)
-		simple(0, function()
-			GetTable[ent] = nil
-		end)
+		simple(0, function() GetTable[ent] = nil end)
 	end)
 
-	function ENT:GetTable()
-		return GetTable[self]
-	end
+	function ENT:GetTable() return GetTable[self] end
 
 	do
 		local rawequal = rawequal
-		function ENT.__eq(a, b)
-			return rawequal(a, b)
-		end
+		function ENT.__eq(a, b) return rawequal(a, b) end
 	end
 
 	local dt = {}
@@ -127,7 +115,11 @@ do
 	do
 		local PLY = Player
 		function PLY:__index(key)
-			return PLY[key] or ENT[key] or (GetTable[self] or dt)[key]
+			local val = PLY[key]
+			if val ~= nil then return val end
+			val = ENT[key]
+			if val ~= nil then return val end
+			return (GetTable[self] or dt)[key]
 		end
 	end
 
@@ -136,14 +128,20 @@ do
 
 	function ENT:__index(key)
 		if (key == ownerkey) then return GetOwner(self) end
-		return ENT[key] or (GetTable[self] or dt)[key]
+		local val = ENT[key]
+		if val ~= nil then return val end
+		return (GetTable[self] or dt)[key]
 	end
 
 	do
 		local WEP = FindMetaTable("Weapon")
 		function WEP:__index(key)
 			if (key == ownerkey) then return GetOwner(self) end
-			return WEP[key] or ENT[key] or (GetTable[self] or dt)[key]
+			local val = WEP[key]
+			if val ~= nil then return val end
+			val = ENT[key]
+			if val ~= nil then return val end
+			return (GetTable[self] or dt)[key]
 		end
 	end
 
@@ -151,7 +149,11 @@ do
 		local VEH = FindMetaTable("Vehicle")
 		function VEH:__index(key)
 			if (key == ownerkey) then return GetOwner(self) end
-			return VEH[key] or ENT[key] or (GetTable[self] or dt)[key]
+			local val = VEH[key]
+			if val ~= nil then return val end
+			val = ENT[key]
+			if val ~= nil then return val end
+			return (GetTable[self] or dt)[key]
 		end
 	end
 

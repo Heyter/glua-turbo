@@ -426,6 +426,10 @@ do
 		cachehex[i] = c
 	end
 
+	util.RGBToHex2 = function(r, g, b)
+		return ( cachehex[r] or "ff" ) .. (cachehex[g] or "ff" ) .. ( cachehex[b] or "ff" ) .. "ff"
+	end
+
 	util.RGBToHex = function(color)
 		return ( cachehex[color.r] or "ff" ) .. (cachehex[color.g] or "ff" ) .. ( cachehex[color.b] or "ff" ) .. "ff"
 	end
