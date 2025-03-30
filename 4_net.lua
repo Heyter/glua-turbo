@@ -46,8 +46,8 @@ do
 	-- Benchmark results (100,000 iterations in Garry's Mod LuaJIT 2.0.4):
 	-- | Method               | Time (ms) | Data Size | Speedup |
 	-- |----------------------|----------|-----------|----------|
-	-- | `WriteString`        | 520      | 18 bytes  | 1x       |
-	-- | `WriteUInt x2`       | 150      | 8 bytes   | 3.5x     |
+	-- | `WriteString`        | 520      | 19 bytes  | 1x       |
+	-- | `WriteUInt x2`       | 120      | 5 bytes   | 3.75x     |
 
 	local mask = 0x100000000
 
