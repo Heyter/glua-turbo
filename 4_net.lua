@@ -53,17 +53,15 @@ do
 
 	function net.WriteSteamID64( steamid64 )
 		local unique_part = tonumber( string.sub(steamid64, 6) )
-		local high = math.floor(unique_part / mask)
-		local low = unique_part % mask
+		local high = unique_part % mask
+		local low = math.floor(unique_part / mask)
 
-		net.WriteUInt(high, 32) net.WriteUInt(low, 32)
+		net.WriteUInt(high, 32) net.WriteUInt(low, 8)
 	end
 
 	function net.ReadSteamID64()
-		local high, low = net.ReadUInt(32), net.ReadUInt(32)
-		local unique_part = high * mask + low
-
-		return "76561" .. tostring(unique_part)
+		local high, low = net.ReadUInt(32), net.ReadUInt(8)
+		return "76561" .. tostring(low * mask + high)
 	end
 end
 
